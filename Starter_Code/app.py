@@ -1,4 +1,5 @@
 # Import the dependencies.
+from os import startfile
 import numpy as np
 
 import sqlalchemy
@@ -98,6 +99,42 @@ def tobs():
     return jsonify([i[0] for i in temps])
 
 
+@app.route('/api/v1.0/<start>')
+def temps_date(start):
+    try:
+        dt.date.fromisoformat(start)
+    except ValueError:
+        return jsonify({"Error": f"Date must be in 'YYYY-MM-DD' format"})
+
+    #Get the date and fetch results for the same.
+
+    temp_query=session.query(func.min(me.tobs),func.max(me.tobs),func.avg(me.tobs))\
+        .filter(me.date >= start).all()
+    print('Successful start date query')
+    session.close()
+    return jsonify([temp_query[0][0],temp_query[0][1],temp_query[0][2]])
+
+@app.route('/api/v1.0/<start>/<end>')
+def temps_start_end(start,end):
+    # Check if date is in right format YYYY-MM-DD
+    try:
+        dt.date.fromisoformat(start)
+        dt.date.fromisoformat(end)
+        assert start < end
+    except ValueError:
+        return jsonify({"error": f"Date must be in YYYY-MM-DD format."})
+    except AssertionError:
+        return jsonify({"error": f"End date must be later than start date."})
+    
+    # Query based on date used
+    temp_metrics = session.query(func.min(me.tobs),func.max(me.tobs),func.avg(me.tobs))\
+        .filter(me.date >= start).filter(me.date <= end)\
+        .all()
+    print('Successful start-end date query')
+    session.close()
+
+    
+    return jsonify([temp_metrics[0][0],temp_metrics[0][1],temp_metrics[0][2]])
 
 
 if __name__ == '__main__':
